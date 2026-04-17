@@ -230,6 +230,7 @@ class APIService {
       method: 'PUT',
       body: JSON.stringify(data)
     })
+  }
 
   async deleteDict(id) {
     return this.request(`/dicts/${id}`, { method: 'DELETE' })

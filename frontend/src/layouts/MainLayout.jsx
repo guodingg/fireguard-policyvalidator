@@ -18,7 +18,7 @@ import {
   FolderOutlined
 } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useAuthStore } from '../store/authStore'
+import useAuthStore from '../store/authStore'
 
 const { Header, Sider, Content, Footer } = Layout
 

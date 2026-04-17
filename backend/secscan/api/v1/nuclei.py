@@ -36,8 +36,7 @@ async def update_templates(background_tasks: BackgroundTasks):
 
 @router.post("/templates/update/offline")
 async def update_templates_offline(
-    file: UploadFile = File(...),
-    background_tasks: BackgroundTasks
+    file: UploadFile = File(...)
 ):
     """
     离线更新Nuclei模板库

@@ -141,7 +141,6 @@ async def import_poc_yaml(
 @router.post("/import/zip")
 async def import_poc_zip(
     file: UploadFile = File(...),
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

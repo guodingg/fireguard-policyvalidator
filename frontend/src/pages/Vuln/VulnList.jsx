@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Card, Table, Input, Select, Space, Tag, Button, message, Popconfirm } from 'antd'
-import { SearchOutlined, SafetyOutlined, ReloadOutlined, CheckCircleOutlined, FixOutlined } from '@ant-design/icons'
+import { SearchOutlined, SafetyOutlined, ReloadOutlined, CheckCircleOutlined, ToolOutlined } from '@ant-design/icons'
 import api from '../../services/api'
 
 const VulnList = () => {
@@ -93,7 +93,7 @@ const VulnList = () => {
             <Button type="text" size="small" icon={<CheckCircleOutlined />} onClick={() => handleVerify(record.id)}>验证</Button>
           )}
           {record.status !== 'fixed' && (
-            <Button type="text" size="small" icon={<FixOutlined />} onClick={() => handleFix(record.id)}>修复</Button>
+            <Button type="text" size="small" icon={<ToolOutlined />} onClick={() => handleFix(record.id)}>修复</Button>
           )}
           <Popconfirm title="标记为误报?" onConfirm={() => handleFalsePositive(record.id)}>
             <Button type="text" size="small">误报</Button>

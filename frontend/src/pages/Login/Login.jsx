@@ -1,27 +1,22 @@
 import { useState } from 'react'
-import { Form, Input, Button, Card, message, Space } from 'antd'
-import { UserOutlined, LockOutlined } from '@ant-design/icons'
+import { Form, Input, Button, message, Checkbox } from 'antd'
+import { UserOutlined, LockOutlined, SafetyOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../../store/authStore'
+import api from '../../services/api'
 import './Login.css'
 
 const Login = () => {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
-  const { login } = useAuthStore()
 
   const onFinish = async (values) => {
     setLoading(true)
     try {
-      const result = await login(values.username, values.password)
-      if (result.success) {
-        message.success('登录成功')
-        navigate('/dashboard')
-      } else {
-        message.error(result.message || '登录失败')
-      }
+      await api.login(values.username, values.password)
+      message.success('登录成功')
+      navigate('/')
     } catch (error) {
-      message.error('登录失败，请稍后重试')
+      message.error(error.message || '登录失败')
     } finally {
       setLoading(false)
     }
@@ -29,72 +24,60 @@ const Login = () => {
 
   return (
     <div className="login-container">
-      <div className="login-bg">
-        <div className="login-card-wrapper">
-          <Card className="login-card" bordered={false}>
-            <div className="login-header">
-              <div className="login-logo">蚂蚁</div>
-              <h1 className="login-title">蚂蚁安全风险评估系统</h1>
-              <p className="login-subtitle">ANTsafe System</p>
+      <div className="login-background">
+        <div className="login-content">
+          <div className="login-header">
+            <div className="login-logo">
+              <SafetyOutlined style={{ fontSize: 48, color: '#1677FF' }} />
             </div>
+            <h1 className="login-title">蚂蚁安全风险评估系统</h1>
+            <p className="login-subtitle">ANTsafe Security Assessment System</p>
+          </div>
 
-            <Form
-              name="login"
-              onFinish={onFinish}
-              autoComplete="off"
-              layout="vertical"
-              requiredMark={false}
+          <Form
+            name="login"
+            className="login-form"
+            onFinish={onFinish}
+            initialValues={{ remember: true }}
+            size="large"
+          >
+            <Form.Item
+              name="username"
+              rules={[{ required: true, message: '请输入用户名' }]}
             >
-              <Form.Item
-                name="username"
-                rules={[{ required: true, message: '请输入用户名' }]}
-              >
-                <Input
-                  prefix={<UserOutlined style={{ color: '#8C8C8C' }} />}
-                  placeholder="用户名"
-                  size="large"
-                />
-              </Form.Item>
+              <Input
+                prefix={<UserOutlined style={{ color: '#8C8C8C' }} />}
+                placeholder="用户名: admin"
+              />
+            </Form.Item>
 
-              <Form.Item
-                name="password"
-                rules={[{ required: true, message: '请输入密码' }]}
-              >
-                <Input.Password
-                  prefix={<LockOutlined style={{ color: '#8C8C8C' }} />}
-                  placeholder="密码"
-                  size="large"
-                />
-              </Form.Item>
+            <Form.Item
+              name="password"
+              rules={[{ required: true, message: '请输入密码' }]}
+            >
+              <Input.Password
+                prefix={<LockOutlined style={{ color: '#8C8C8C' }} />}
+                placeholder="密码: admin123"
+              />
+            </Form.Item>
 
-              <Form.Item style={{ marginBottom: 16 }}>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  size="large"
-                  block
-                  loading={loading}
-                  className="login-button"
-                >
-                  登 录
-                </Button>
-              </Form.Item>
-            </Form>
+            <Form.Item name="remember" valuePropName="checked">
+              <div className="login-options">
+                <Checkbox>记住密码</Checkbox>
+                <a href="#">忘记密码?</a>
+              </div>
+            </Form.Item>
 
-            <div className="login-footer">
-              <Space split={<span style={{ color: '#E8E8E8' }}>|</span>}>
-                <a href="https://www.mayisafe.cn" target="_blank" rel="noopener noreferrer">
-                  关于我们
-                </a>
-                <a href="https://www.mayisafe.cn" target="_blank" rel="noopener noreferrer">
-                  帮助中心
-                </a>
-              </Space>
-              <p className="login-copyright">
-                © 2024 蚂蚁安全 www.mayisafe.cn 版权所有
-              </p>
-            </div>
-          </Card>
+            <Form.Item>
+              <Button type="primary" htmlType="submit" block loading={loading} className="login-button">
+                登 录
+              </Button>
+            </Form.Item>
+          </Form>
+
+          <div className="login-footer">
+            <p>© 2024 蚂蚁安全 www.mayisafe.cn</p>
+          </div>
         </div>
       </div>
     </div>

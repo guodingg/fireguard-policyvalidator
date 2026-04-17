@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: secscan-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///app/data/secscan.db
+      - SECRET_KEY=your-secret-key-change-in-production
+      - AI_PROVIDER=kimi
+      - AI_API_KEY=${AI_API_KEY:-}
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 前端 (如果需要nginx部署前端)
+  # frontend:
+  #   image: nginx:alpine
+  #   container_name: secscan-frontend
+  #   ports:
+  #     - "80:80"
+  #   volumes:
+  #     - ./frontend/dist:/usr/share/nginx/html
+  #     - ./nginx.conf:/etc/nginx/conf.d/default.conf
+  #   depends_on:
+  #     - backend
+  #   restart: unless-stopped

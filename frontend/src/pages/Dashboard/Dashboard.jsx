@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Row, Col, Card, Button, Input, Select, Table, Space, Progress, Tag } from 'antd'
+import { useState, useEffect } from 'react'
+import { Row, Col, Card, Button, Input, Select, Table, Space, Progress, Tag, message } from 'antd'
 import {
   SearchOutlined,
   PlayCircleOutlined,
@@ -8,56 +8,77 @@ import {
   CheckCircleOutlined,
   WarningOutlined,
   HistoryOutlined,
-  RightOutlined
+  RightOutlined,
+  SyncOutlined
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import ReactECharts from 'echarts-for-react'
+import api from '../../services/api'
 import './Dashboard.css'
 
 const { Search } = Input
 
 const Dashboard = () => {
   const navigate = useNavigate()
+  const [loading, setLoading] = useState(false)
+  const [stats, setStats] = useState({
+    tasks: { total: 0, running: 0, completed: 0 },
+    assets: { total: 0, alive: 0 },
+    vulnerabilities: { total: 0, critical: 0, high: 0 }
+  })
+  const [recentTasks, setRecentTasks] = useState([])
+  const [taskTrend, setTaskTrend] = useState([])
   const [scanLoading, setScanLoading] = useState(false)
 
-  // 模拟统计数据
-  const stats = [
+  useEffect(() => {
+    loadDashboardData()
+  }, [])
+
+  const loadDashboardData = async () => {
+    setLoading(true)
+    try {
+      const data = await api.getDashboardStats()
+      setStats(data)
+      setRecentTasks(data.recent_tasks || [])
+      setTaskTrend(data.task_trend || [])
+    } catch (error) {
+      console.error('加载仪表盘数据失败:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 统计卡片
+  const statCards = [
     {
       title: '总扫描任务',
-      value: 128,
+      value: stats.tasks.total,
       icon: <SearchOutlined />,
       color: 'blue',
-      key: 'tasks'
+      onClick: () => navigate('/scan/tasks')
     },
     {
       title: '安全主机',
-      value: 95,
+      value: stats.assets.alive,
+      suffix: `/${stats.assets.total}`,
       icon: <CloudServerOutlined />,
       color: 'green',
-      key: 'secure'
+      onClick: () => navigate('/assets')
     },
     {
       title: '高危漏洞',
-      value: 16,
+      value: stats.vulnerabilities.critical + stats.vulnerabilities.high,
       icon: <WarningOutlined />,
       color: 'orange',
-      key: 'critical'
+      onClick: () => navigate('/vulns')
     },
     {
-      title: '已修复漏洞',
-      value: 86,
+      title: '已完成任务',
+      value: stats.tasks.completed,
       icon: <CheckCircleOutlined />,
       color: 'blue',
-      key: 'fixed'
+      onClick: () => navigate('/scan/tasks')
     }
-  ]
-
-  // 模拟最近任务
-  const recentTasks = [
-    { id: 1, name: '内网资产扫描', target: '192.168.1.0/24', status: 'completed', progress: 100, vulns: 12, time: '2024-04-17 10:30' },
-    { id: 2, name: 'Web漏洞检测', target: 'example.com', status: 'running', progress: 68, vulns: 5, time: '2024-04-17 14:20' },
-    { id: 3, name: '边界扫描', target: '10.0.0.0/8', status: 'pending', progress: 0, vulns: 0, time: '2024-04-17 15:00' },
-    { id: 4, name: '数据库审计', target: '192.168.2.10', status: 'completed', progress: 100, vulns: 3, time: '2024-04-16 09:15' }
   ]
 
   // 漏洞分布图表配置
@@ -70,9 +91,7 @@ const Dashboard = () => {
       orient: 'vertical',
       right: '5%',
       top: 'center',
-      textStyle: {
-        color: '#8C8C8C'
-      }
+      textStyle: { color: '#8C8C8C' }
     },
     color: ['#FF4D4F', '#FF8C00', '#d4b106', '#52C41A', '#1677FF'],
     series: [
@@ -87,22 +106,16 @@ const Dashboard = () => {
           borderColor: '#fff',
           borderWidth: 2
         },
-        label: {
-          show: false
-        },
+        label: { show: false },
         emphasis: {
-          label: {
-            show: true,
-            fontSize: 14,
-            fontWeight: 'bold'
-          }
+          label: { show: true, fontSize: 14, fontWeight: 'bold' }
         },
         data: [
-          { value: 16, name: '严重' },
-          { value: 28, name: '高危' },
-          { value: 45, name: '中危' },
-          { value: 62, name: '低危' },
-          { value: 35, name: '信息' }
+          { value: stats.vulnerabilities.critical, name: '严重' },
+          { value: stats.vulnerabilities.high, name: '高危' },
+          { value: 0, name: '中危' },
+          { value: 0, name: '低危' },
+          { value: 0, name: '信息' }
         ]
       }
     ]
@@ -110,25 +123,14 @@ const Dashboard = () => {
 
   // 任务趋势图表配置
   const trendChartOption = {
-    tooltip: {
-      trigger: 'axis'
-    },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      containLabel: true
-    },
+    tooltip: { trigger: 'axis' },
+    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
     xAxis: {
       type: 'category',
       boundaryGap: false,
-      data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
-      axisLine: {
-        lineStyle: { color: '#E8E8E8' }
-      },
-      axisLabel: {
-        color: '#8C8C8C'
-      }
+      data: taskTrend.map(t => t.date?.slice(5) || ''),
+      axisLine: { lineStyle: { color: '#E8E8E8' } },
+      axisLabel: { color: '#8C8C8C' }
     },
     yAxis: {
       type: 'value',
@@ -144,22 +146,20 @@ const Dashboard = () => {
         smooth: true,
         areaStyle: {
           color: {
-            type: 'linear',
-            x: 0, y: 0, x2: 0, y2: 1,
+            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
             colorStops: [
               { offset: 0, color: 'rgba(22, 119, 255, 0.3)' },
               { offset: 1, color: 'rgba(22, 119, 255, 0.05)' }
             ]
           }
         },
-        data: [12, 25, 18, 32, 28, 15, 8]
+        data: taskTrend.map(t => t.count || 0)
       }
     ]
   }
 
   const taskColumns = [
     { title: '任务名称', dataIndex: 'name', key: 'name' },
-    { title: '扫描目标', dataIndex: 'target', key: 'target' },
     {
       title: '状态',
       dataIndex: 'status',
@@ -178,16 +178,10 @@ const Dashboard = () => {
       title: '进度',
       dataIndex: 'progress',
       key: 'progress',
-      render: (progress, record) => (
-        record.status === 'running' ? (
-          <Progress percent={progress} size="small" />
-        ) : (
-          <Progress percent={progress} size="small" status={progress === 100 ? 'success' : 'exception'} />
-        )
+      render: (progress) => (
+        <Progress percent={progress} size="small" status={progress === 100 ? 'success' : 'active'} />
       )
     },
-    { title: '发现漏洞', dataIndex: 'vulns', key: 'vulns', render: (v) => v > 0 ? <span style={{ color: '#FF4D4F' }}>{v}</span> : v },
-    { title: '时间', dataIndex: 'time', key: 'time' },
     {
       title: '操作',
       key: 'action',
@@ -201,26 +195,24 @@ const Dashboard = () => {
 
   const handleQuickScan = () => {
     setScanLoading(true)
-    setTimeout(() => {
-      setScanLoading(false)
-      message.success('扫描任务已创建')
-      navigate('/scan/tasks')
-    }, 1500)
+    message.info('扫描功能开发中')
+    setTimeout(() => setScanLoading(false), 1500)
   }
 
   return (
     <div className="dashboard">
       {/* 统计卡片 */}
       <Row gutter={[16, 16]} className="stat-row">
-        {stats.map((stat, index) => (
+        {statCards.map((stat, index) => (
           <Col xs={24} sm={12} lg={6} key={index}>
-            <Card className={`stat-card stat-card-${stat.color}`} bordered={false}>
+            <Card className={`stat-card stat-card-${stat.color}`} bordered={false} onClick={stat.onClick} hoverable>
               <div className="stat-card-inner">
-                <div className={`stat-card-icon ${stat.color}`}>
-                  {stat.icon}
-                </div>
+                <div className={`stat-card-icon ${stat.color}`}>{stat.icon}</div>
                 <div className="stat-card-content">
-                  <div className="stat-card-value">{stat.value}</div>
+                  <div className="stat-card-value">
+                    {loading ? '-' : stat.value}
+                    {stat.suffix && <span className="stat-card-suffix">{stat.suffix}</span>}
+                  </div>
                   <div className="stat-card-label">{stat.title}</div>
                 </div>
               </div>
@@ -244,36 +236,20 @@ const Dashboard = () => {
                   <Select.Option value="ip">IP</Select.Option>
                   <Select.Option value="cidr">CIDR</Select.Option>
                 </Select>
-                <Input
-                  style={{ width: 'calc(100% - 100px)' }}
-                  placeholder="请输入目标，如: example.com"
-                  size="large"
-                />
+                <Input style={{ width: 'calc(100% - 100px)' }} placeholder="请输入目标，如: example.com" size="large" />
               </Input.Group>
               <Input.Group compact style={{ marginBottom: 16 }}>
                 <Select defaultValue="full" style={{ width: '100%' }}>
                   <Select.Option value="quick">快速扫描</Select.Option>
                   <Select.Option value="full">全面扫描</Select.Option>
                   <Select.Option value="vuln">漏洞扫描</Select.Option>
-                  <Select.Option value="custom">自定义</Select.Option>
                 </Select>
               </Input.Group>
               <Space style={{ width: '100%' }}>
-                <Button
-                  type="primary"
-                  icon={<PlayCircleOutlined />}
-                  size="large"
-                  onClick={handleQuickScan}
-                  loading={scanLoading}
-                  style={{ flex: 1 }}
-                >
+                <Button type="primary" icon={<PlayCircleOutlined />} size="large" onClick={handleQuickScan} loading={scanLoading} style={{ flex: 1 }}>
                   开始扫描
                 </Button>
-                <Button
-                  icon={<HistoryOutlined />}
-                  size="large"
-                  onClick={() => navigate('/scan/tasks')}
-                >
+                <Button icon={<HistoryOutlined />} size="large" onClick={() => navigate('/scan/tasks')}>
                   历史记录
                 </Button>
               </Space>
@@ -282,11 +258,9 @@ const Dashboard = () => {
         </Col>
 
         <Col xs={24} lg={14}>
-          <Card className="content-card" bordered={false}>
-            <div className="content-card-title">
-              <SafetyOutlined style={{ marginRight: 8, color: '#FF8C00' }} />
-              漏洞分布统计
-            </div>
+          <Card className="content-card" bordered={false} title={
+            <span><SafetyOutlined style={{ marginRight: 8, color: '#FF8C00' }} />漏洞分布统计</span>
+          } extra={<Button type="link" icon={<SyncOutlined />} onClick={loadDashboardData}>刷新</Button>}>
             <ReactECharts option={vulnChartOption} style={{ height: 240 }} />
           </Card>
         </Col>
@@ -295,23 +269,12 @@ const Dashboard = () => {
       {/* 最近任务 */}
       <Row gutter={[16, 16]}>
         <Col span={24}>
-          <Card className="content-card" bordered={false}>
-            <div className="content-card-title-row">
-              <div className="content-card-title">
-                <HistoryOutlined style={{ marginRight: 8, color: '#1677FF' }} />
-                最近扫描任务
-              </div>
-              <Button type="link" onClick={() => navigate('/scan/tasks')}>
-                查看全部 <RightOutlined />
-              </Button>
-            </div>
-            <Table
-              columns={taskColumns}
-              dataSource={recentTasks}
-              rowKey="id"
-              pagination={false}
-              size="middle"
-            />
+          <Card className="content-card" bordered={false} title={
+            <span><HistoryOutlined style={{ marginRight: 8, color: '#1677FF' }} />最近扫描任务</span>
+          } extra={
+            <Button type="link" onClick={() => navigate('/scan/tasks')}>查看全部 <RightOutlined /></Button>
+          }>
+            <Table columns={taskColumns} dataSource={recentTasks} rowKey="id" pagination={false} loading={loading} size="middle" />
           </Card>
         </Col>
       </Row>

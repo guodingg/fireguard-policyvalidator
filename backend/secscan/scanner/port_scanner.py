@@ -1,10 +1,9 @@
 """
-端口扫描器
+TCP端口扫描器
 """
 
 import asyncio
 import socket
-import concurrent.futures
 from typing import AsyncGenerator, List, Dict, Any, Optional
 import ipaddress
 
@@ -24,14 +23,28 @@ COMMON_PORTS = {
     445: "smb",
     993: "imaps",
     995: "pop3s",
+    1433: "mssql",
+    1521: "oracle",
     3306: "mysql",
     3389: "rdp",
     5432: "postgresql",
+    5900: "vnc",
     6379: "redis",
     8080: "http-proxy",
     8443: "https-alt",
     27017: "mongodb"
 }
+
+# Top 100 ports
+TOP_100_PORTS = [
+    7, 9, 13, 21, 22, 23, 25, 26, 37, 53, 79, 80, 81, 88, 106, 110, 111, 113,
+    119, 135, 139, 143, 144, 179, 199, 389, 427, 443, 444, 445, 465, 513, 514,
+    515, 543, 544, 548, 554, 587, 631, 646, 873, 990, 993, 995, 1025, 1026,
+    1027, 1028, 1029, 1110, 1433, 1720, 1723, 1755, 1900, 2000, 2001, 2049,
+    2121, 2717, 3000, 3128, 3306, 3389, 3986, 4899, 5000, 5009, 5051, 5060,
+    5101, 5190, 5357, 5432, 5632, 5666, 5800, 5900, 6000, 6001, 6646, 7070,
+    8000, 8008, 8009, 8080, 8081, 8443, 8888, 9100, 9999, 10000, 32768, 49152
+]
 
 class PortScanner(ScannerBase):
     """TCP端口扫描器"""
@@ -40,15 +53,43 @@ class PortScanner(ScannerBase):
         super().__init__(task_id, options)
         self.timeout = options.get("timeout", 3)
         self.maxConcurrency = options.get("maxConcurrency", 100)
-        self.ports_to_scan = options.get("ports", list(COMMON_PORTS.keys()))
+        
+        # 端口选项
+        port_mode = options.get("port_mode", "common")  # common | top100 | all | custom
+        if port_mode == "top100":
+            self.ports_to_scan = TOP_100_PORTS
+        elif port_mode == "all":
+            self.ports_to_scan = list(range(1, 1001))  # 前1000端口
+        elif port_mode == "custom":
+            custom_ports = options.get("ports", "")
+            if custom_ports:
+                self.ports_to_scan = self._parse_ports(custom_ports)
+            else:
+                self.ports_to_scan = list(COMMON_PORTS.keys())
+        else:  # common
+            self.ports_to_scan = list(COMMON_PORTS.keys())
+    
+    def _parse_ports(self, port_str: str) -> List[int]:
+        """解析端口字符串"""
+        ports = set()
+        for part in port_str.split(","):
+            part = part.strip()
+            if "-" in part:
+                start, end = part.split("-")
+                ports.update(range(int(start), int(end) + 1))
+            else:
+                ports.add(int(part))
+        return sorted(ports)
     
     async def validate_target(self, target: str) -> bool:
         """验证目标"""
         try:
-            # 支持IP、CIDR、域名
+            target = target.strip()
             if "/" in target:
+                # CIDR
                 ipaddress.ip_network(target, strict=False)
             else:
+                # 域名或IP
                 socket.gethostbyname(target)
             return True
         except:
@@ -66,14 +107,18 @@ class PortScanner(ScannerBase):
                 if "/" in target:
                     # CIDR
                     network = ipaddress.ip_network(target, strict=False)
-                    # 限制范围
                     if network.num_addresses > 256:
-                        # 太大了，只取前256个
+                        # 限制扫描范围
                         expanded.extend([str(ip) for ip in list(network.hosts())[:256]])
                     else:
                         expanded.extend([str(ip) for ip in network.hosts()])
                 else:
-                    expanded.append(target)
+                    # 尝试DNS解析
+                    try:
+                        ip = socket.gethostbyname(target)
+                        expanded.append(ip)
+                    except:
+                        expanded.append(target)
             except:
                 expanded.append(target)
         
@@ -90,7 +135,7 @@ class PortScanner(ScannerBase):
             # 获取banner
             banner = ""
             try:
-                reader.writer.write(b"\r\n")
+                writer.write(b"\r\n")
                 await writer.drain()
                 banner = await asyncio.wait_for(reader.read(1024), timeout=1)
                 if banner:
@@ -115,10 +160,24 @@ class PortScanner(ScannerBase):
     
     async def scan(self, targets: List[str]) -> AsyncGenerator[HostResult, None]:
         """执行扫描"""
-        # 展开目标
-        all_targets = self._expand_targets(targets)
+        # 验证并展开目标
+        valid_targets = []
+        for t in targets:
+            if await self.validate_target(t):
+                valid_targets.append(t)
+        
+        all_targets = self._expand_targets(valid_targets)
+        
+        if not all_targets:
+            return
+        
+        # 去重
+        all_targets = list(set(all_targets))
         total = len(all_targets) * len(self.ports_to_scan)
         current = 0
+        
+        if total == 0:
+            return
         
         # 创建信号量控制并发
         semaphore = asyncio.Semaphore(self.maxConcurrency)
@@ -146,7 +205,8 @@ class PortScanner(ScannerBase):
                     current=current,
                     total=total,
                     target=f"{result.ip}:{result.port}",
-                    message=f"发现开放端口 {result.service}"
+                    message=f"发现开放端口 {result.service}",
+                    vulns=0
                 )
                 yield result
             else:
@@ -156,7 +216,8 @@ class PortScanner(ScannerBase):
                     current=current,
                     total=total,
                     target=f"{ip}:{port}",
-                    message="端口关闭"
+                    message="端口关闭",
+                    vulns=0
                 )
         
         await self.close()

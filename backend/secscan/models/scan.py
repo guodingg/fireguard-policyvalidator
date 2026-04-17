@@ -44,5 +44,8 @@ class ScanTask(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # 错误信息
+    error_message = Column(Text)
+    
     def __repr__(self):
         return f"<ScanTask {self.name}>"

@@ -1351,6 +1351,10 @@ class VulnIntelService:
             total_result = await db.execute(count_stmt)
             total = total_result.scalar() or 0
 
+            # 如果stats为空，先刷新
+            if not self._stats.get("total"):
+                await self._refresh_stats()
+
             # 分页排序
             stmt = stmt.order_by(
                 IntelVuln.published_date.desc().nulls_last(),

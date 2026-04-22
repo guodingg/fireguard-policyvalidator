@@ -7,7 +7,7 @@ const { Text } = Typography
 const { Option } = Select
 
 const QUERY_HISTORY_KEY = 'secscan_intel_query_history'
-const MAX_HISTORY = 20
+const MAX_HISTORY = 10
 
 const ThreatIntelPage = () => {
   const [loading, setLoading] = useState(false)
@@ -200,7 +200,7 @@ const ThreatIntelPage = () => {
       children: (
         <Card bordered={false}>
           <Space style={{ marginBottom: 12 }}>
-            <Text type="secondary">最近 {queryHistory.length} 条查询记录，最多保存 {MAX_HISTORY} 条</Text>
+            <Text type="secondary">最近 {queryHistory.length} 次查询记录，最多保存 {MAX_HISTORY} 次</Text>
             {queryHistory.length > 0 && (
               <Popconfirm title="清空所有查询记录？" onConfirm={clearHistory}>
                 <Button size="small" danger icon={<DeleteOutlined />}>清空</Button>

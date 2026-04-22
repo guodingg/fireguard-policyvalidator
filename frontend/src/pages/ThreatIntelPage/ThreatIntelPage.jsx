@@ -34,7 +34,7 @@ const ThreatIntelPage = () => {
       queryValue: record.queryValue,
       intelSource: record.intelSource,
       sourceName: sources.find(s => s.id === record.intelSource)?.name || record.intelSource,
-      total: record.total || 0,
+      result: record.result || { total: 0, high_risk: 0, quota_remain: 0, assets: [], iocs: [] },
     }
     const updated = [item, ...queryHistory.filter(h => !(h.queryType === item.queryType && h.queryValue === item.queryValue))].slice(0, MAX_HISTORY)
     setQueryHistory(updated)
@@ -57,8 +57,9 @@ const ThreatIntelPage = () => {
     setQueryType(record.queryType || 'ip')
     setQueryValue(record.queryValue || '')
     setIntelSource(record.intelSource || 'crt')
+    setResult(record.result || { total: 0, high_risk: 0, quota_remain: 0, assets: [], iocs: [] })
     setActiveTab('query')
-    message.success('已加载查询条件，可直接点击查询')
+    message.success('已加载查询记录')
   }
 
   const sources = [
@@ -102,7 +103,7 @@ const ThreatIntelPage = () => {
 
       if (data.code === 0) {
         setResult(data)
-        saveToHistory({ queryType, queryValue, intelSource, total: data.total })
+        saveToHistory({ queryType, queryValue, intelSource, result: data })
         message.success(`查询成功，发现 ${data.total} 条结果`)
       } else {
         message.error(data.message || '查询失败')
@@ -149,7 +150,8 @@ const ThreatIntelPage = () => {
     }},
     { title: '查询内容', dataIndex: 'queryValue', key: 'queryValue', ellipsis: true, render: (t) => <Text code style={{ fontSize: 12 }}>{t}</Text> },
     { title: '情报源', dataIndex: 'sourceName', key: 'sourceName', render: (t) => <Tag color="blue">{t}</Tag> },
-    { title: '结果数', dataIndex: 'total', key: 'total', render: (v) => v > 0 ? <Tag color="green">{v}</Tag> : <Tag>0</Tag> },
+    { title: '查询结果', dataIndex: 'result', key: 'result', render: (r) => r?.total > 0 ? <Tag color="green">{r.total} 条</Tag> : <Tag>0 条</Tag> },
+    { title: '高危资产', dataIndex: 'result', key: 'high_risk', render: (r) => r?.high_risk > 0 ? <Tag color="red">{r.high_risk}</Tag> : <Tag>0</Tag> },
     { title: '操作', key: 'action', width: 120, render: (_, r) => (
       <Space>
         <Button size="small" type="link" icon={<PlusOutlined />} onClick={() => loadFromHistory(r)}>加载</Button>

@@ -34,7 +34,7 @@
 ## 演示截图
 
 ### 首页
-!([https://your-repository.com/path/to/your/image.png](https://github.com/guodingg/ANTsafe-FireGuard/blob/main/iShot_2026-04-28_10.37.15.png))
+!([首页演示截图](https://github.com/guodingg/ANTsafe-FireGuard/blob/main/iShot_2026-04-28_10.37.15.png))
 
 ---
 

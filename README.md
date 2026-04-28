@@ -33,13 +33,13 @@
 
 ## 演示截图
 
-### 方式一：Docker Compose 启动（推荐）
-
+### 首页
+https://github.com/guodingg/ANTsafe-FireGuard/blob/main/iShot_2026-04-28_10.37.15.png
 ---
 
 ## 快速部署（Docker 一键启动）
 
-### 首页
+### 方式一：Docker Compose 启动（推荐）
 
 
 ```bash
